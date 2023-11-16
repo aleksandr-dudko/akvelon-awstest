@@ -3,9 +3,7 @@ package com.akvelon.awstest.service;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.ObjectMetadata;
-import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectResult;
+import com.amazonaws.services.s3.model.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -37,6 +35,12 @@ public class S3ClientService {
 
     public boolean isObjectExists(String originalFilename) {
         return s3Client.doesObjectExist(bucketName, originalFilename);
+    }
+
+    public S3Object getObject(String originalFilename) {
+        GetObjectRequest getObjectRequest = new GetObjectRequest(bucketName, originalFilename);
+
+        return s3Client.getObject(getObjectRequest);
     }
 
 }

@@ -1,11 +1,13 @@
 package com.akvelon.awstest;
 
+import com.akvelon.awstest.model.Image;
 import com.akvelon.awstest.service.ImageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -27,10 +29,18 @@ public class ImagesController {
     @RequestMapping(
             path = "/upload",
             method = RequestMethod.POST,
-            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<String> uploadImage(@RequestPart(value = "image") @Schema(type = "string", format = "binary") MultipartFile file) throws IOException {
-        Long id = service.uploadPhoto(file);
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE,
+            produces = "application/json")
+    public ResponseEntity<Image> uploadImage(
+            @RequestPart(value = "image") @Schema(type = "string", format = "binary") MultipartFile file) {
+        try {
+            // Assuming service.uploadPhoto(file) returns a valid Image object
+            Image image = service.uploadPhoto(file);
 
-        return ResponseEntity.ok(id.toString());
+            return new ResponseEntity<>(image, HttpStatus.OK);
+        } catch (Exception e) {
+            // Handle exceptions and return an appropriate ResponseEntity
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }
