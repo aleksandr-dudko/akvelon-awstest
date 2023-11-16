@@ -38,6 +38,6 @@ public class ImagesController {
             return ResponseEntity.badRequest().build();
         }
 
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(putObjectResult.getMetadata().toString());
     }
 }

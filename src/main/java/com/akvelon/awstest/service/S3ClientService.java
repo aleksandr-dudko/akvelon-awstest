@@ -15,7 +15,6 @@ import java.io.IOException;
 public class S3ClientService {
     private final Regions clientRegion = Regions.US_EAST_1;
     private final String bucketName = "dudko-aws-test-bucket";
-    private final String stringObjKeyName = "*** String object key name ***";
     private final AmazonS3 s3Client;
 
     public S3ClientService() {
@@ -25,11 +24,6 @@ public class S3ClientService {
     }
 
     public PutObjectResult uploadPhoto(MultipartFile file) throws IOException {
-        // Upload a text string as a new object.
-/*
-        s3Client.putObject(bucketName, stringObjKeyName, "Uploaded String Object");
-*/
-
         // Upload a file as a new object with ContentType and title specified.
         ObjectMetadata metadata = new ObjectMetadata();
         metadata.setContentType("image/png");
