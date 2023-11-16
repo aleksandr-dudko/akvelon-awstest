@@ -23,15 +23,20 @@ public class S3ClientService {
                 .build();
     }
 
-    public PutObjectResult uploadPhoto(MultipartFile file) throws IOException {
+    public PutObjectResult uploadPhoto(MultipartFile file, Long id) throws IOException {
         // Upload a file as a new object with ContentType and title specified.
         ObjectMetadata metadata = new ObjectMetadata();
         metadata.setContentType("image/png");
-        metadata.addUserMetadata("name", file.getName());
+        metadata.addUserMetadata("id", id.toString());
+        metadata.addUserMetadata("name", file.getOriginalFilename());
         metadata.addUserMetadata("size", String.valueOf(file.getSize()));
-        PutObjectRequest request = new PutObjectRequest(bucketName, file.getName(), file.getInputStream(), metadata);
+        PutObjectRequest request = new PutObjectRequest(bucketName, file.getOriginalFilename(), file.getInputStream(), metadata);
 
         return s3Client.putObject(request);
+    }
+
+    public boolean isObjectExists(String originalFilename) {
+        return s3Client.doesObjectExist(bucketName, originalFilename);
     }
 
 }
