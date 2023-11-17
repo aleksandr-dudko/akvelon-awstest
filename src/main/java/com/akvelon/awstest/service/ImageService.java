@@ -16,6 +16,10 @@ import java.io.IOException;
 public class ImageService {
     @Autowired
     private S3ClientService service;
+    @Autowired
+    private DynamoDbService dynamoDbService;
+    @Autowired
+    private SQSService sqsService;
 
     @Transactional
     public Image uploadPhoto(MultipartFile file) throws IOException {
@@ -33,6 +37,23 @@ public class ImageService {
         if (putObjectResult == null) {
             throw new NullPointerException();
         }
+
+        dynamoDbService.saveTaskState(file.getOriginalFilename(),
+                "original/" + file.getOriginalFilename(),
+                "",
+                id.toString(),
+                "Created");
+
+        /*sqsService.receiveMessageAsync(message -> {
+            dynamoDbService.updateTaskState(message,
+                    "processed/" + file.getOriginalFilename(),
+                    "InProgress");
+        });*/
+        sqsService.putTaskInSQS(id.toString());
+        dynamoDbService.updateTaskState(id.toString(),
+                "processed/" + file.getOriginalFilename(),
+                "InProgress");
+
 
         return new Image(id, file.getOriginalFilename());
     }
