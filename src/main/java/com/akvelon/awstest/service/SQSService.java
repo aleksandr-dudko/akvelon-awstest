@@ -33,7 +33,7 @@ public class SQSService {
         }
     }
 
-    public void receiveMessageAsync(OnMessageReceivedListener onReceiveMessageListener) {
+    public void setMessageReceivedListener(OnMessageReceivedListener onReceiveMessageListener) {
         AmazonSQSAsync sqsAsyncClient = AmazonSQSAsyncClientBuilder.defaultClient();
         ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest()
                 .withQueueUrl(queueUrl)

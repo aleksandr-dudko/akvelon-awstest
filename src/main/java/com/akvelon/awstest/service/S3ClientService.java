@@ -1,9 +1,13 @@
 package com.akvelon.awstest.service;
 
+import com.akvelon.awstest.model.Image;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.*;
+import com.amazonaws.services.s3.model.GetObjectRequest;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.S3Object;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,16 +25,17 @@ public class S3ClientService {
                 .build();
     }
 
-    public PutObjectResult uploadPhoto(MultipartFile file, Long id) throws IOException {
+    public Image uploadPhoto(MultipartFile file, Long id, String folder) throws IOException {
         // Upload a file as a new object with ContentType and title specified.
         ObjectMetadata metadata = new ObjectMetadata();
         metadata.setContentType("image/png");
         metadata.addUserMetadata("id", id.toString());
         metadata.addUserMetadata("name", file.getOriginalFilename());
         metadata.addUserMetadata("size", String.valueOf(file.getSize()));
-        PutObjectRequest request = new PutObjectRequest(bucketName, file.getOriginalFilename(), file.getInputStream(), metadata);
+        PutObjectRequest request = new PutObjectRequest(bucketName, folder + "/" + file.getOriginalFilename(), file.getInputStream(), metadata);
+        s3Client.putObject(request);
 
-        return s3Client.putObject(request);
+        return new Image(id, bucketName, file.getOriginalFilename(), folder);
     }
 
     public boolean isObjectExists(String originalFilename) {

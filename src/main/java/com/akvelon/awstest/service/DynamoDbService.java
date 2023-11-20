@@ -1,18 +1,15 @@
 package com.akvelon.awstest.service;
 
-import com.amazonaws.AmazonServiceException;
+import com.akvelon.awstest.model.Image;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.document.DynamoDB;
-import com.amazonaws.services.dynamodbv2.document.Item;
-import com.amazonaws.services.dynamodbv2.document.PutItemOutcome;
-import com.amazonaws.services.dynamodbv2.document.Table;
+import com.amazonaws.services.dynamodbv2.document.*;
 import com.amazonaws.services.dynamodbv2.document.spec.PutItemSpec;
-import com.amazonaws.services.dynamodbv2.model.AttributeValue;
-import com.amazonaws.services.dynamodbv2.model.UpdateItemRequest;
+import com.amazonaws.services.dynamodbv2.document.spec.UpdateItemSpec;
+import com.amazonaws.services.dynamodbv2.document.utils.NameMap;
+import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
+import com.amazonaws.services.dynamodbv2.model.ReturnValue;
 import org.springframework.stereotype.Service;
-
-import java.util.Map;
 
 @Service
 public class DynamoDbService {
@@ -28,12 +25,12 @@ public class DynamoDbService {
         this.tableName = "AWStest-dynamo-table";
     }
 
-    public void saveTaskState(String fileName, String originalFilePath, String processedFilePath, String taskId, String state) {
+    public void saveTaskState(Image image, String taskId, String state) {
         try {
             Item item = new Item()
-                    .withString("FileName", fileName)
-                    .withString("OriginalFilePath", originalFilePath)
-                    .withString("ProcessedFilePath", processedFilePath)
+                    .withString("FileName", image.name())
+                    .withString("OriginalFilePath", image.getOriginalPath())
+                    .withString("ProcessedFilePath", image.getProcessedPath())
                     .withString("TaskId", taskId)
                     .withString("State", state);
 
@@ -49,28 +46,22 @@ public class DynamoDbService {
         }
     }
 
-    public void updateTaskState(String id, String processedFilePath, String state) {
+    public void updateTaskState(String id, String state) {
         try {
-            // Формируем запрос на обновление
-            UpdateItemRequest updateItemRequest = new UpdateItemRequest()
-                    .withTableName(tableName)
-                    .withKey(Map.of("TaskId", new AttributeValue().withS(id)))
-                    .withExpressionAttributeValues(Map.of(
-                            ":ProcessedFilePath", new AttributeValue().withS(processedFilePath),
-                            ":State", new AttributeValue().withS(state)
-                    ));
+            Table table = dynamoDB.getTable(tableName);
 
-            // Выполняем обновление
-            client.updateItem(updateItemRequest);
+            UpdateItemSpec updateItemSpec = new UpdateItemSpec()
+                    .withPrimaryKey("TaskId", id)
+                    .withUpdateExpression("SET #s = :val")
+                    .withNameMap(new NameMap().with("#s", "State"))
+                    .withValueMap(new ValueMap().withString(":val", state))
+                    .withReturnValues(ReturnValue.ALL_NEW);
 
-        } catch (AmazonServiceException e) {
-            System.err.println("AmazonServiceException: " + e.getErrorMessage());
-            System.err.println("Status Code: " + e.getStatusCode());
-            System.err.println("Error Code: " + e.getErrorCode());
-            System.err.println("Request ID: " + e.getRequestId());
-            e.printStackTrace();
+            UpdateItemOutcome outcome = table.updateItem(updateItemSpec);
+
+            System.out.println("Task state updated successfully. UpdateItemOutcome: " + outcome);
         } catch (Exception e) {
-            System.err.println("Error saving task state: " + e.getMessage());
+            System.err.println("Error updating task state: " + e.getMessage());
         }
     }
 }
