@@ -35,7 +35,7 @@ public class S3ClientService {
         PutObjectRequest request = new PutObjectRequest(bucketName, folder + "/" + file.getOriginalFilename(), file.getInputStream(), metadata);
         s3Client.putObject(request);
 
-        return new Image(id, bucketName, file.getOriginalFilename(), folder);
+        return new Image(id, bucketName, file.getOriginalFilename());
     }
 
     public boolean isObjectExists(String originalFilename) {

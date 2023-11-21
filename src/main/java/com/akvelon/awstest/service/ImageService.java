@@ -1,7 +1,7 @@
 package com.akvelon.awstest.service;
 
 import com.akvelon.awstest.model.Image;
-import com.amazonaws.services.s3.model.S3Object;
+import com.amazonaws.services.sqs.model.Message;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
@@ -14,11 +14,11 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 @Service
 @EnableAsync
@@ -32,40 +32,28 @@ public class ImageService {
 
     @Transactional
     public Image uploadPhoto(MultipartFile file) throws IOException {
-        /*boolean isExistInS3 = service.isObjectExists(file.getOriginalFilename());
-        // already exists
-        if (isExistInS3) {
-            S3Object s3Object = service.getObject(file.getOriginalFilename());
-            Long id = Long.valueOf(s3Object.getObjectMetadata().getUserMetadata().get("id"));
-            return new Image(id, "", file.getOriginalFilename());
-        }*/
-
-        // not exists
         Long id = System.currentTimeMillis();
         Image image = service.uploadPhoto(file, id, "original");
-        if (image == null) {
-            throw new NullPointerException();
-        }
-
         dynamoDbService.saveTaskState(image,
                 id.toString(),
                 "Created");
+        sqsService.putTaskInSQS(id.toString());
 
-        sqsService.setMessageReceivedListener(message -> dynamoDbService.updateTaskState(message,
-                "InProgress"));
+        /*sqsService.setMessageReceivedListener(message -> dynamoDbService.updateTaskState(message,
+                "InProgress"));*/
 
-        MultipartFile file1 = rotate(file);
+        /*MultipartFile file1 = rotate(file);
         Image image1 = service.uploadPhoto(file1, id, "processed");
         dynamoDbService.updateTaskState(id.toString(),
-                "Done");
+                "Done");*/
 
-        /*sqsService.putTaskInSQS(id.toString());
+        /*
         dynamoDbService.updateTaskState(id.toString(),
                 "processed/" + file.getOriginalFilename(),
                 "InProgress");*/
 
 
-        return image1;
+        return image;
     }
 
     private MultipartFile rotate(MultipartFile file) throws IOException {
@@ -116,5 +104,13 @@ public class ImageService {
         g.dispose();
 
         return rotatedImage;
+    }
+
+    public String getTask(String id) {
+        return dynamoDbService.getTaskStateById(id);
+    }
+
+    public List<Message> processImage() {
+        return sqsService.receiveMessages();
     }
 }

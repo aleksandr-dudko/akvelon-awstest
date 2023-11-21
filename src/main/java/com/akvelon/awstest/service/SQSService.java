@@ -6,6 +6,8 @@ import com.amazonaws.services.sqs.AmazonSQSAsyncClientBuilder;
 import com.amazonaws.services.sqs.model.*;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -62,5 +64,22 @@ public class SQSService {
 
     interface OnMessageReceivedListener {
         void onMessageReceived(String messageBody);
+    }
+
+    public List<Message> receiveMessages() {
+        ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest()
+                .withQueueUrl(queueUrl)
+                .withWaitTimeSeconds(20)
+                .withMaxNumberOfMessages(10);
+
+        AmazonSQSAsync sqsAsyncClient = AmazonSQSAsyncClientBuilder.defaultClient();
+        List<Message> messageList = new ArrayList<>(sqsAsyncClient.receiveMessage(receiveMessageRequest).getMessages());
+
+        for (Message message : sqsAsyncClient.receiveMessage(receiveMessageRequest).getMessages()) {
+            DeleteMessageRequest deleteMessageRequest = new DeleteMessageRequest(queueUrl, message.getReceiptHandle());
+            sqsAsyncClient.deleteMessage(deleteMessageRequest);
+        }
+
+        return messageList;
     }
 }

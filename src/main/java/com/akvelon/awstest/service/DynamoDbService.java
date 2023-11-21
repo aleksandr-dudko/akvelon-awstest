@@ -4,6 +4,7 @@ import com.akvelon.awstest.model.Image;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.document.*;
+import com.amazonaws.services.dynamodbv2.document.spec.GetItemSpec;
 import com.amazonaws.services.dynamodbv2.document.spec.PutItemSpec;
 import com.amazonaws.services.dynamodbv2.document.spec.UpdateItemSpec;
 import com.amazonaws.services.dynamodbv2.document.utils.NameMap;
@@ -62,6 +63,21 @@ public class DynamoDbService {
             System.out.println("Task state updated successfully. UpdateItemOutcome: " + outcome);
         } catch (Exception e) {
             System.err.println("Error updating task state: " + e.getMessage());
+        }
+    }
+
+    public String getTaskStateById(String taskId) {
+        Table table = dynamoDB.getTable(tableName);
+
+        GetItemSpec getItemSpec = new GetItemSpec()
+                .withPrimaryKey("TaskId", taskId);
+
+        Item item = table.getItem(getItemSpec);
+
+        if (item != null) {
+            return item.getString("State");
+        } else {
+            return null;
         }
     }
 }
