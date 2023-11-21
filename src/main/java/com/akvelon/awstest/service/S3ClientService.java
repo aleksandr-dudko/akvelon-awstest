@@ -11,7 +11,10 @@ import com.amazonaws.services.s3.model.S3Object;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.io.InputStream;
 
 @Service
 public class S3ClientService {
@@ -32,7 +35,7 @@ public class S3ClientService {
         metadata.addUserMetadata("id", id.toString());
         metadata.addUserMetadata("name", file.getOriginalFilename());
         metadata.addUserMetadata("size", String.valueOf(file.getSize()));
-        PutObjectRequest request = new PutObjectRequest(bucketName, folder + "/" + file.getOriginalFilename(), file.getInputStream(), metadata);
+        PutObjectRequest request = new PutObjectRequest(bucketName, folder + "/" + id, file.getInputStream(), metadata);
         s3Client.putObject(request);
 
         return new Image(id, bucketName, file.getOriginalFilename());
@@ -47,5 +50,4 @@ public class S3ClientService {
 
         return s3Client.getObject(getObjectRequest);
     }
-
 }

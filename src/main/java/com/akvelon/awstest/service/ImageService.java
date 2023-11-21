@@ -1,7 +1,7 @@
 package com.akvelon.awstest.service;
 
 import com.akvelon.awstest.model.Image;
-import com.amazonaws.services.sqs.model.Message;
+import com.amazonaws.services.s3.model.S3Object;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
@@ -18,7 +18,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 
 @Service
 @EnableAsync
@@ -56,23 +55,21 @@ public class ImageService {
         return image;
     }
 
-    private MultipartFile rotate(MultipartFile file) throws IOException {
-        // Convert MultipartFile to BufferedImage
-        InputStream fileStream = file.getInputStream();
+    private MultipartFile rotate(InputStream fileStream, String name) throws IOException {
         BufferedImage originalImage = ImageIO.read(fileStream);
 
         // Rotate the image (adjust the angle as needed)
-        BufferedImage rotatedImage = rotateImage(originalImage, 90);
+        BufferedImage rotatedImage = rotateImage(originalImage, 180);
 
         // Save the rotated image to a temporary file
-        Path tempFile = Files.createTempFile("rotated_", ".jpg");
+        Path tempFile = Files.createTempFile("rotated_", ".png");
         ImageIO.write(rotatedImage, "png", tempFile.toFile());
 
         // Create a new MultipartFile from the temporary file
         MultipartFile rotatedMultipartFile = new MockMultipartFile(
                 "file",               // parameter name in the form
-                file.getOriginalFilename(),
-                MediaType.IMAGE_JPEG_VALUE,
+                name,
+                MediaType.IMAGE_PNG_VALUE,
                 Files.newInputStream(tempFile));
 
         // Clean up the temporary file
@@ -95,8 +92,8 @@ public class ImageService {
         Graphics2D g = rotatedImage.createGraphics();
 
         AffineTransform transform = new AffineTransform();
-        transform.translate((newWidth - width) / 2, (newHeight - height) / 2);
-        transform.rotate(radians, width / 2, height / 2);
+        transform.translate((double) (newWidth - width) / 2, (double) (newHeight - height) / 2);
+        transform.rotate(radians, (double) width / 2, (double) height / 2);
 
         g.setTransform(transform);
         g.drawImage(originalImage, 0, 0, null);
@@ -110,7 +107,17 @@ public class ImageService {
         return dynamoDbService.getTaskStateById(id);
     }
 
-    public List<Message> processImage() {
-        return sqsService.receiveMessages();
+    public void processImage() throws IOException {
+        sqsService.receiveMessages(messageBody -> {
+            dynamoDbService.updateTaskState(messageBody, "InProgress");
+            S3Object s3Object = service.getObject("original/" + messageBody);
+            MultipartFile multipartFile = rotate(s3Object.getObjectContent(), "processed/" + messageBody);
+            service.uploadPhoto(multipartFile, Long.valueOf(messageBody), "processed");
+            dynamoDbService.updateTaskState(messageBody, "Done");
+        });
+    }
+
+    private static BufferedImage convertInputStreamToBufferedImage(InputStream inputStream) throws IOException {
+        return ImageIO.read(inputStream);
     }
 }

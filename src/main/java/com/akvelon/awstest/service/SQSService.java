@@ -6,8 +6,7 @@ import com.amazonaws.services.sqs.AmazonSQSAsyncClientBuilder;
 import com.amazonaws.services.sqs.model.*;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -35,51 +34,22 @@ public class SQSService {
         }
     }
 
-    public void setMessageReceivedListener(OnMessageReceivedListener onReceiveMessageListener) {
-        AmazonSQSAsync sqsAsyncClient = AmazonSQSAsyncClientBuilder.defaultClient();
-        ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest()
-                .withQueueUrl(queueUrl)
-                .withWaitTimeSeconds(20)
-                .withMaxNumberOfMessages(10);
-
-        sqsAsyncClient.receiveMessageAsync(receiveMessageRequest, new AsyncHandler<>() {
-
-            @Override
-            public void onError(Exception exception) {
-                exception.printStackTrace();
-            }
-
-            @Override
-            public void onSuccess(ReceiveMessageRequest request, ReceiveMessageResult receiveMessageResult) {
-                for (Message message : receiveMessageResult.getMessages()) {
-                    System.out.println("Получено сообщение:");
-                    System.out.println("Тело сообщения: " + message.getBody());
-                    System.out.println("Message ID: " + message.getMessageId());
-                    onReceiveMessageListener.onMessageReceived(message.getBody());
-                    sqsAsyncClient.deleteMessageAsync(queueUrl, message.getReceiptHandle());
-                }
-            }
-        });
-    }
-
     interface OnMessageReceivedListener {
-        void onMessageReceived(String messageBody);
+        void onMessageReceived(String messageBody) throws IOException;
     }
 
-    public List<Message> receiveMessages() {
+    public void receiveMessages(OnMessageReceivedListener onMessageReceivedListener) throws IOException {
         ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest()
                 .withQueueUrl(queueUrl)
                 .withWaitTimeSeconds(20)
                 .withMaxNumberOfMessages(10);
 
         AmazonSQSAsync sqsAsyncClient = AmazonSQSAsyncClientBuilder.defaultClient();
-        List<Message> messageList = new ArrayList<>(sqsAsyncClient.receiveMessage(receiveMessageRequest).getMessages());
 
         for (Message message : sqsAsyncClient.receiveMessage(receiveMessageRequest).getMessages()) {
+            onMessageReceivedListener.onMessageReceived(message.getBody());
             DeleteMessageRequest deleteMessageRequest = new DeleteMessageRequest(queueUrl, message.getReceiptHandle());
             sqsAsyncClient.deleteMessage(deleteMessageRequest);
         }
-
-        return messageList;
     }
 }

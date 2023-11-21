@@ -15,6 +15,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.Objects;
 
 @Controller
@@ -61,8 +62,7 @@ public class ImagesController {
     }
 
     @Scheduled(cron = "0 * * * * *")
-    public void processImage() {
-        System.out.println("processImage");
-        System.out.println(service.processImage());
+    public void processImage() throws IOException {
+        service.processImage();
     }
 }

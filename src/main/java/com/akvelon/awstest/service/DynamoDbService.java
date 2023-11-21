@@ -30,8 +30,8 @@ public class DynamoDbService {
         try {
             Item item = new Item()
                     .withString("FileName", image.name())
-                    .withString("OriginalFilePath", image.getOriginalPath())
-                    .withString("ProcessedFilePath", image.getProcessedPath())
+                    .withString("OriginalFilePath", taskId)
+                    .withString("ProcessedFilePath", taskId)
                     .withString("TaskId", taskId)
                     .withString("State", state);
 
