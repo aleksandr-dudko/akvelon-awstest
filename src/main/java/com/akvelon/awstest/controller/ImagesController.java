@@ -1,4 +1,4 @@
-package com.akvelon.awstest;
+package com.akvelon.awstest.controller;
 
 import com.akvelon.awstest.model.Image;
 import com.akvelon.awstest.service.ImageService;
@@ -54,7 +54,7 @@ public class ImagesController {
     @GetMapping(path = "/task/{taskId}")
     public ResponseEntity<String> getTask(@PathVariable String taskId) {
         String taskIdResp = service.getTask(taskId);
-        if(taskIdResp == null) {
+        if (taskIdResp == null) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
 

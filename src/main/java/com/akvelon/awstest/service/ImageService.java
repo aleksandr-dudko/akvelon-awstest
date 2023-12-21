@@ -3,7 +3,6 @@ package com.akvelon.awstest.service;
 import com.akvelon.awstest.model.Image;
 import com.amazonaws.services.s3.model.S3Object;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
@@ -19,6 +18,8 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import static com.akvelon.awstest.config.AWSSettings.*;
+
 @Service
 @EnableAsync
 public class ImageService {
@@ -32,25 +33,9 @@ public class ImageService {
     @Transactional
     public Image uploadPhoto(MultipartFile file) throws IOException {
         Long id = System.currentTimeMillis();
-        Image image = service.uploadPhoto(file, id, "original");
-        dynamoDbService.saveTaskState(image,
-                id.toString(),
-                "Created");
+        Image image = service.uploadPhoto(file, id, ORIGINAL);
+        dynamoDbService.saveTaskState(image, id.toString(), CREATED_STATE);
         sqsService.putTaskInSQS(id.toString());
-
-        /*sqsService.setMessageReceivedListener(message -> dynamoDbService.updateTaskState(message,
-                "InProgress"));*/
-
-        /*MultipartFile file1 = rotate(file);
-        Image image1 = service.uploadPhoto(file1, id, "processed");
-        dynamoDbService.updateTaskState(id.toString(),
-                "Done");*/
-
-        /*
-        dynamoDbService.updateTaskState(id.toString(),
-                "processed/" + file.getOriginalFilename(),
-                "InProgress");*/
-
 
         return image;
     }
@@ -59,17 +44,15 @@ public class ImageService {
         BufferedImage originalImage = ImageIO.read(fileStream);
 
         // Rotate the image (adjust the angle as needed)
-        BufferedImage rotatedImage = rotateImage(originalImage, 180);
+        BufferedImage rotatedImage = rotateImage(originalImage, ROTATION_ANGLE);
 
-        // Save the rotated image to a temporary file
-        Path tempFile = Files.createTempFile("rotated_", ".png");
+        Path tempFile = Files.createTempFile(FILE_PREFIX, FILE_SUFFIX);
         ImageIO.write(rotatedImage, "png", tempFile.toFile());
 
-        // Create a new MultipartFile from the temporary file
         MultipartFile rotatedMultipartFile = new MockMultipartFile(
-                "file",               // parameter name in the form
+                PARAMETER_NAME,
                 name,
-                MediaType.IMAGE_PNG_VALUE,
+                MEDIA_TYPE,
                 Files.newInputStream(tempFile));
 
         // Clean up the temporary file
@@ -103,17 +86,28 @@ public class ImageService {
         return rotatedImage;
     }
 
+    @Transactional
     public String getTask(String id) {
         return dynamoDbService.getTaskStateById(id);
     }
 
+    @Transactional
     public void processImage() throws IOException {
         sqsService.receiveMessages(messageBody -> {
-            dynamoDbService.updateTaskState(messageBody, "InProgress");
-            S3Object s3Object = service.getObject("original/" + messageBody);
-            MultipartFile multipartFile = rotate(s3Object.getObjectContent(), "processed/" + messageBody);
-            service.uploadPhoto(multipartFile, Long.valueOf(messageBody), "processed");
-            dynamoDbService.updateTaskState(messageBody, "Done");
+            // Update task state to "InProgress"
+            dynamoDbService.updateTaskState(messageBody, IN_PROGRESS_STATE);
+
+            // Retrieve the original image from S3
+            S3Object s3Object = service.getObject(ORIGINAL + "/" + messageBody);
+
+            // Rotate the image
+            MultipartFile multipartFile = rotate(s3Object.getObjectContent(), PROCESSED_FOLDER + "/" + messageBody);
+
+            // Upload the processed image to S3
+            service.uploadPhoto(multipartFile, Long.valueOf(messageBody), PROCESSED_FOLDER);
+
+            // Update task state to "Done"
+            dynamoDbService.updateTaskState(messageBody, DONE_STATE);
         });
     }
 

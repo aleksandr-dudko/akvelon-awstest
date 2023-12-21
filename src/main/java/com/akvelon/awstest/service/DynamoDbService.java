@@ -12,30 +12,29 @@ import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
 import com.amazonaws.services.dynamodbv2.model.ReturnValue;
 import org.springframework.stereotype.Service;
 
+import static com.akvelon.awstest.config.AWSSettings.*;
+
 @Service
 public class DynamoDbService {
     private final DynamoDB dynamoDB;
-    private final String tableName;
-    private AmazonDynamoDB client;
+    private final AmazonDynamoDB client;
 
     public DynamoDbService() {
         // Initialize DynamoDB client
         this.client = AmazonDynamoDBClientBuilder.standard().build();
         this.dynamoDB = new DynamoDB(client);
-        // Specify your DynamoDB table name
-        this.tableName = "AWStest-dynamo-table";
     }
 
     public void saveTaskState(Image image, String taskId, String state) {
         try {
             Item item = new Item()
-                    .withString("FileName", image.name())
-                    .withString("OriginalFilePath", taskId)
-                    .withString("ProcessedFilePath", taskId)
-                    .withString("TaskId", taskId)
-                    .withString("State", state);
+                    .withString(FILE_NAME, image.name())
+                    .withString(ORIGINAL_FILE_PATH, taskId)
+                    .withString(PROCESSED_FILE_PATH, taskId)
+                    .withString(TASK_ID, taskId)
+                    .withString(STATE, state);
 
-            Table table = dynamoDB.getTable(tableName);
+            Table table = dynamoDB.getTable(TABLE_NAME);
 
             PutItemSpec putItemSpec = new PutItemSpec().withItem(item);
 
@@ -49,12 +48,12 @@ public class DynamoDbService {
 
     public void updateTaskState(String id, String state) {
         try {
-            Table table = dynamoDB.getTable(tableName);
+            Table table = dynamoDB.getTable(TABLE_NAME);
 
             UpdateItemSpec updateItemSpec = new UpdateItemSpec()
-                    .withPrimaryKey("TaskId", id)
+                    .withPrimaryKey(TASK_ID, id)
                     .withUpdateExpression("SET #s = :val")
-                    .withNameMap(new NameMap().with("#s", "State"))
+                    .withNameMap(new NameMap().with("#s", STATE))
                     .withValueMap(new ValueMap().withString(":val", state))
                     .withReturnValues(ReturnValue.ALL_NEW);
 
@@ -67,15 +66,15 @@ public class DynamoDbService {
     }
 
     public String getTaskStateById(String taskId) {
-        Table table = dynamoDB.getTable(tableName);
+        Table table = dynamoDB.getTable(TABLE_NAME);
 
         GetItemSpec getItemSpec = new GetItemSpec()
-                .withPrimaryKey("TaskId", taskId);
+                .withPrimaryKey(TASK_ID, taskId);
 
         Item item = table.getItem(getItemSpec);
 
         if (item != null) {
-            return item.getString("State");
+            return item.getString(STATE);
         } else {
             return null;
         }

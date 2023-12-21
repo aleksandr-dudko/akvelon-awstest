@@ -1,6 +1,5 @@
 package com.akvelon.awstest.service;
 
-import com.amazonaws.handlers.AsyncHandler;
 import com.amazonaws.services.sqs.AmazonSQSAsync;
 import com.amazonaws.services.sqs.AmazonSQSAsyncClientBuilder;
 import com.amazonaws.services.sqs.model.*;
@@ -10,16 +9,15 @@ import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+import static com.akvelon.awstest.config.AWSSettings.*;
+
 @Service
 public class SQSService {
-    // Specify your SQS queue URL
-    private final String queueUrl = "AWSTest-queue";
-
     public void putTaskInSQS(String taskId) {
         AmazonSQSAsync sqsAsyncClient = AmazonSQSAsyncClientBuilder.defaultClient();
 
         SendMessageRequest sendMessageRequest = new SendMessageRequest()
-                .withQueueUrl(queueUrl)
+                .withQueueUrl(QUEUE_URL)
                 .withMessageBody(taskId);
 
         Future<SendMessageResult> future = sqsAsyncClient.sendMessageAsync(sendMessageRequest);
@@ -40,15 +38,15 @@ public class SQSService {
 
     public void receiveMessages(OnMessageReceivedListener onMessageReceivedListener) throws IOException {
         ReceiveMessageRequest receiveMessageRequest = new ReceiveMessageRequest()
-                .withQueueUrl(queueUrl)
-                .withWaitTimeSeconds(20)
-                .withMaxNumberOfMessages(10);
+                .withQueueUrl(QUEUE_URL)
+                .withWaitTimeSeconds(WAIT_TIME_SECONDS)
+                .withMaxNumberOfMessages(MAX_NUMBER_OF_MESSAGES);
 
         AmazonSQSAsync sqsAsyncClient = AmazonSQSAsyncClientBuilder.defaultClient();
 
         for (Message message : sqsAsyncClient.receiveMessage(receiveMessageRequest).getMessages()) {
             onMessageReceivedListener.onMessageReceived(message.getBody());
-            DeleteMessageRequest deleteMessageRequest = new DeleteMessageRequest(queueUrl, message.getReceiptHandle());
+            DeleteMessageRequest deleteMessageRequest = new DeleteMessageRequest(QUEUE_URL, message.getReceiptHandle());
             sqsAsyncClient.deleteMessage(deleteMessageRequest);
         }
     }
