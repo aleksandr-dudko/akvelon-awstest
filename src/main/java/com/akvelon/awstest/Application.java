@@ -6,9 +6,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
-@OpenAPIDefinition(
-        info = @Info(title = "T Task", version = "0.0.2", description = "T API Documentation.")
-)
+@OpenAPIDefinition(info = @Info(title = "AWS Task", version = "0.0.3", description = "AWS API Documentation."))
 @SpringBootApplication()
 @EnableTransactionManagement
 public class Application {

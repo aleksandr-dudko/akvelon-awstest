@@ -2,7 +2,6 @@ package com.akvelon.awstest.service;
 
 import com.akvelon.awstest.model.ImageData;
 import com.amazonaws.services.s3.model.S3Object;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
@@ -17,8 +16,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.ExecutionException;
 
-import static com.akvelon.awstest.config.AWSSettings.*;
+import static com.akvelon.awstest.config.Constants.*;
+import static com.akvelon.awstest.config.State.*;
 
 @Service
 @EnableAsync
@@ -28,10 +29,10 @@ public class ImageService {
     private SQSService sqsService;
 
     @Transactional
-    public ImageData uploadPhoto(MultipartFile file) throws IOException {
+    public ImageData uploadPhoto(MultipartFile file) throws IOException, InterruptedException, ExecutionException {
         Long id = System.currentTimeMillis();
         ImageData imageData = service.uploadPhoto(file, id, ORIGINAL);
-        dynamoDbService.saveTaskState(imageData, id.toString(), CREATED_STATE);
+        dynamoDbService.saveTaskState(imageData, id.toString(), CREATED);
         sqsService.putTaskInSQS(id.toString());
 
         return imageData;
@@ -91,7 +92,7 @@ public class ImageService {
     public void processImage() throws IOException {
         sqsService.receiveMessages(messageBody -> {
             // Update task state to "InProgress"
-            dynamoDbService.updateTaskState(messageBody, IN_PROGRESS_STATE);
+            dynamoDbService.updateTaskState(messageBody, IN_PROGRESS);
 
             // Retrieve the original image from S3
             S3Object s3Object = service.getObject(ORIGINAL + "/" + messageBody);
@@ -103,7 +104,7 @@ public class ImageService {
             service.uploadPhoto(multipartFile, Long.valueOf(messageBody), PROCESSED_FOLDER);
 
             // Update task state to "Done"
-            dynamoDbService.updateTaskState(messageBody, DONE_STATE);
+            dynamoDbService.updateTaskState(messageBody, DONE);
         });
     }
 }

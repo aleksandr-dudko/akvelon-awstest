@@ -13,7 +13,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 
-import static com.akvelon.awstest.config.AWSSettings.*;
+import static com.akvelon.awstest.config.AWSSettings.BUCKET_NAME;
+import static com.akvelon.awstest.config.AWSSettings.CLIENT_REGION;
+import static com.akvelon.awstest.config.Constants.*;
 
 @Service
 @Transactional

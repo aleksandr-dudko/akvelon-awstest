@@ -9,11 +9,13 @@ import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-import static com.akvelon.awstest.config.AWSSettings.*;
+import static com.akvelon.awstest.config.AWSSettings.QUEUE_URL;
+import static com.akvelon.awstest.config.Constants.MAX_NUMBER_OF_MESSAGES;
+import static com.akvelon.awstest.config.Constants.WAIT_TIME_SECONDS;
 
 @Service
 public class SQSService {
-    public void putTaskInSQS(String taskId) {
+    public void putTaskInSQS(String taskId) throws ExecutionException, InterruptedException {
         AmazonSQSAsync sqsAsyncClient = AmazonSQSAsyncClientBuilder.defaultClient();
 
         SendMessageRequest sendMessageRequest = new SendMessageRequest()
@@ -21,15 +23,9 @@ public class SQSService {
                 .withMessageBody(taskId);
 
         Future<SendMessageResult> future = sqsAsyncClient.sendMessageAsync(sendMessageRequest);
-
-        try {
-            SendMessageResult sendMessageResult = future.get();
-            System.out.println("Task " + taskId + " added to SQS asynchronously. Message ID: " + sendMessageResult.getMessageId());
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
-        } finally {
-            sqsAsyncClient.shutdown();
-        }
+        SendMessageResult sendMessageResult = future.get();
+        System.out.println("Task " + taskId + " added to SQS asynchronously. Message ID: " + sendMessageResult.getMessageId());
+        sqsAsyncClient.shutdown();
     }
 
     interface OnMessageReceivedListener {

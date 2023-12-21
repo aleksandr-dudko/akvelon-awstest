@@ -1,9 +1,12 @@
 package com.akvelon.awstest.service;
 
+import com.akvelon.awstest.config.State;
 import com.akvelon.awstest.model.ImageData;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.document.*;
+import com.amazonaws.services.dynamodbv2.document.DynamoDB;
+import com.amazonaws.services.dynamodbv2.document.Item;
+import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.document.spec.GetItemSpec;
 import com.amazonaws.services.dynamodbv2.document.spec.PutItemSpec;
 import com.amazonaws.services.dynamodbv2.document.spec.UpdateItemSpec;
@@ -12,7 +15,8 @@ import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
 import com.amazonaws.services.dynamodbv2.model.ReturnValue;
 import org.springframework.stereotype.Service;
 
-import static com.akvelon.awstest.config.AWSSettings.*;
+import static com.akvelon.awstest.config.AWSSettings.TABLE_NAME;
+import static com.akvelon.awstest.config.Constants.*;
 
 @Service
 public class DynamoDbService {
@@ -32,13 +36,13 @@ public class DynamoDbService {
      * @param taskId    The unique identifier of the task.
      * @param state     The state to be saved for the task.
      */
-    public void saveTaskState(ImageData imageData, String taskId, String state) {
+    public void saveTaskState(ImageData imageData, String taskId, State state) {
         Item taskItem = new Item()
                 .withString(TASK_ID, taskId)
                 .withString(FILE_NAME, imageData.name())
                 .withString(ORIGINAL_FILE_PATH, taskId)
                 .withString(PROCESSED_FILE_PATH, taskId)
-                .withString(STATE, state);
+                .withString(STATE, state.toString());
 
         Table dynamoTable = dynamoDB.getTable(TABLE_NAME);
 
@@ -47,14 +51,14 @@ public class DynamoDbService {
         dynamoTable.putItem(putItemSpec);
     }
 
-    public void updateTaskState(String id, String state) {
+    public void updateTaskState(String id, State state) {
         Table table = dynamoDB.getTable(TABLE_NAME);
 
         UpdateItemSpec updateItemSpec = new UpdateItemSpec()
                 .withPrimaryKey(TASK_ID, id)
                 .withUpdateExpression("SET #s = :val")
                 .withNameMap(new NameMap().with("#s", STATE))
-                .withValueMap(new ValueMap().withString(":val", state))
+                .withValueMap(new ValueMap().withString(":val", state.toString()))
                 .withReturnValues(ReturnValue.ALL_NEW);
 
         table.updateItem(updateItemSpec);
