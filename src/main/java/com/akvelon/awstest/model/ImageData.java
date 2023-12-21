@@ -1,6 +1,6 @@
 package com.akvelon.awstest.model;
 
-public record Image(Long id, String bucket, String name) {
+public record ImageData(Long id, String bucket, String name) {
     public String getOriginalPath() {
         return "s3://" + bucket + "/Original/" + name;
     }

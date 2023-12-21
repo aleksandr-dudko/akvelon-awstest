@@ -1,6 +1,6 @@
 package com.akvelon.awstest.service;
 
-import com.akvelon.awstest.model.Image;
+import com.akvelon.awstest.model.ImageData;
 import com.amazonaws.services.s3.model.S3Object;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockMultipartFile;
@@ -23,21 +23,18 @@ import static com.akvelon.awstest.config.AWSSettings.*;
 @Service
 @EnableAsync
 public class ImageService {
-    @Autowired
     private S3ClientService service;
-    @Autowired
     private DynamoDbService dynamoDbService;
-    @Autowired
     private SQSService sqsService;
 
     @Transactional
-    public Image uploadPhoto(MultipartFile file) throws IOException {
+    public ImageData uploadPhoto(MultipartFile file) throws IOException {
         Long id = System.currentTimeMillis();
-        Image image = service.uploadPhoto(file, id, ORIGINAL);
-        dynamoDbService.saveTaskState(image, id.toString(), CREATED_STATE);
+        ImageData imageData = service.uploadPhoto(file, id, ORIGINAL);
+        dynamoDbService.saveTaskState(imageData, id.toString(), CREATED_STATE);
         sqsService.putTaskInSQS(id.toString());
 
-        return image;
+        return imageData;
     }
 
     private MultipartFile rotate(InputStream fileStream, String name) throws IOException {
@@ -87,11 +84,10 @@ public class ImageService {
     }
 
     @Transactional
-    public String getTask(String id) {
+    public String getTaskState(String id) {
         return dynamoDbService.getTaskStateById(id);
     }
 
-    @Transactional
     public void processImage() throws IOException {
         sqsService.receiveMessages(messageBody -> {
             // Update task state to "InProgress"
@@ -109,9 +105,5 @@ public class ImageService {
             // Update task state to "Done"
             dynamoDbService.updateTaskState(messageBody, DONE_STATE);
         });
-    }
-
-    private static BufferedImage convertInputStreamToBufferedImage(InputStream inputStream) throws IOException {
-        return ImageIO.read(inputStream);
     }
 }

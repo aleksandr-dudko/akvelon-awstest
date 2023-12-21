@@ -1,6 +1,6 @@
 package com.akvelon.awstest.service;
 
-import com.akvelon.awstest.model.Image;
+import com.akvelon.awstest.model.ImageData;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.dynamodbv2.document.*;
@@ -25,44 +25,39 @@ public class DynamoDbService {
         this.dynamoDB = new DynamoDB(client);
     }
 
-    public void saveTaskState(Image image, String taskId, String state) {
-        try {
-            Item item = new Item()
-                    .withString(FILE_NAME, image.name())
-                    .withString(ORIGINAL_FILE_PATH, taskId)
-                    .withString(PROCESSED_FILE_PATH, taskId)
-                    .withString(TASK_ID, taskId)
-                    .withString(STATE, state);
+    /**
+     * Saves the state of a task in DynamoDB.
+     *
+     * @param imageData The Image object containing information about the task.
+     * @param taskId    The unique identifier of the task.
+     * @param state     The state to be saved for the task.
+     */
+    public void saveTaskState(ImageData imageData, String taskId, String state) {
+        Item taskItem = new Item()
+                .withString(TASK_ID, taskId)
+                .withString(FILE_NAME, imageData.name())
+                .withString(ORIGINAL_FILE_PATH, taskId)
+                .withString(PROCESSED_FILE_PATH, taskId)
+                .withString(STATE, state);
 
-            Table table = dynamoDB.getTable(TABLE_NAME);
+        Table dynamoTable = dynamoDB.getTable(TABLE_NAME);
 
-            PutItemSpec putItemSpec = new PutItemSpec().withItem(item);
+        PutItemSpec putItemSpec = new PutItemSpec().withItem(taskItem);
 
-            PutItemOutcome outcome = table.putItem(putItemSpec);
-
-            System.out.println("Task state saved successfully. PutItemOutcome: " + outcome);
-        } catch (Exception e) {
-            System.err.println("Error saving task state: " + e.getMessage());
-        }
+        dynamoTable.putItem(putItemSpec);
     }
 
     public void updateTaskState(String id, String state) {
-        try {
-            Table table = dynamoDB.getTable(TABLE_NAME);
+        Table table = dynamoDB.getTable(TABLE_NAME);
 
-            UpdateItemSpec updateItemSpec = new UpdateItemSpec()
-                    .withPrimaryKey(TASK_ID, id)
-                    .withUpdateExpression("SET #s = :val")
-                    .withNameMap(new NameMap().with("#s", STATE))
-                    .withValueMap(new ValueMap().withString(":val", state))
-                    .withReturnValues(ReturnValue.ALL_NEW);
+        UpdateItemSpec updateItemSpec = new UpdateItemSpec()
+                .withPrimaryKey(TASK_ID, id)
+                .withUpdateExpression("SET #s = :val")
+                .withNameMap(new NameMap().with("#s", STATE))
+                .withValueMap(new ValueMap().withString(":val", state))
+                .withReturnValues(ReturnValue.ALL_NEW);
 
-            UpdateItemOutcome outcome = table.updateItem(updateItemSpec);
-
-            System.out.println("Task state updated successfully. UpdateItemOutcome: " + outcome);
-        } catch (Exception e) {
-            System.err.println("Error updating task state: " + e.getMessage());
-        }
+        table.updateItem(updateItemSpec);
     }
 
     public String getTaskStateById(String taskId) {
